@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Navigate to the workspace directory
+CWD_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$CWD_DIR"
+
+echo "============================================="
+echo " Starting ErgoLearn AI (Tauri Desktop Client) "
+echo "============================================="
+
+# 1. Spawn Python backend in background
+echo "[Backend] Launching Pose & Biomechanics Engine..."
+./src-python/venv/bin/python ./src-python/main.py > /dev/null 2>&1 &
+BACKEND_PID=$!
+echo "[Backend] Server PID: $BACKEND_PID"
+
+# 2. Cleanup hook to terminate Python backend when Tauri exits
+cleanup() {
+    echo ""
+    echo "[System] Shutting down Python backend (PID: $BACKEND_PID)..."
+    kill $BACKEND_PID 2>/dev/null
+    exit 0
+}
+trap cleanup SIGINT SIGTERM EXIT
+
+# 3. Start Tauri dev server
+echo "[Frontend] Launching Tauri client..."
+npx tauri dev

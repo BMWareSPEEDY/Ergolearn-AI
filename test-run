@@ -1,0 +1,45 @@
+#!/bin/bash
+
+# Navigate to the workspace directory
+CWD_DIR="$(cd "$(dirname "$0")" && pwd)"
+cd "$CWD_DIR"
+
+echo "============================================="
+echo " Starting ErgoLearn AI (Browser Web Client) "
+echo "============================================="
+
+# 1. Start Python backend in background
+echo "[Backend] Launching Pose & Biomechanics Engine..."
+./src-python/venv/bin/python ./src-python/main.py > /dev/null 2>&1 &
+BACKEND_PID=$!
+echo "[Backend] Server PID: $BACKEND_PID"
+
+# 2. Start Vite server in background
+echo "[Frontend] Starting Vite development server..."
+npx vite src-frontend --port 1420 > /dev/null 2>&1 &
+VITE_PID=$!
+echo "[Frontend] Vite PID: $VITE_PID"
+
+# 3. Cleanup hook to terminate background tasks on exit
+cleanup() {
+    echo ""
+    echo "[System] Shutting down Vite frontend (PID: $VITE_PID)..."
+    kill $VITE_PID 2>/dev/null
+    echo "[System] Shutting down Python backend (PID: $BACKEND_PID)..."
+    kill $BACKEND_PID 2>/dev/null
+    exit 0
+}
+trap cleanup SIGINT SIGTERM EXIT
+
+# 4. Wait for Vite to bind to port
+sleep 2
+
+# 5. Open in default browser
+echo "[System] Opening dashboard in browser..."
+open http://localhost:1420/
+
+# 6. Keep process open
+echo "[System] Running. Press [Ctrl+C] to stop and clean up."
+while true; do
+    sleep 1
+done
